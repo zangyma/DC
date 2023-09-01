@@ -1,0 +1,86 @@
+version: '3.8'
+
+services:
+  nginx:
+    image: nginx
+    container_name: nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./conf.d:/etc/nginx/conf.d
+      - ./certs:/etc/nginx/certs
+      - ./html:/var/www/html
+
+  php:
+    image: php:fpm
+    container_name: php
+    restart: always
+    volumes:
+      - ./html:/var/www/html
+
+  php74:
+    image: php:7.4.33-fpm
+    container_name: php74
+    restart: always
+    volumes:
+      - ./html:/var/www/html
+
+  mysql:
+    image: mysql
+    container_name: mysql
+    restart: always
+    volumes:
+      - ./mysql:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: W2br0oT
+      MYSQL_USER: admii1lvm
+      MYSQL_PASSWORD: adm@i1LvmI*
+
+  redis:
+    image: redis
+    container_name: redis
+    restart: always
+    volumes:
+      - ./redis:/data
+
+  mcsm-web: # MCSM web
+    container_name: mcsm-web
+    build:
+        context: .
+        dockerfile: dockerfile-web
+        args:
+            INSTALL_PATH: ${INSTALL_PATH-/opt/docker-mcsm}
+            TZ: ${TZ-Asia/Shanghai}
+    network_mode: "host"
+    restart: always
+    environment:
+      - PUID=0
+      - PGID=0
+      - UMASK=022
+    volumes:
+      - ${INSTALL_PATH-/opt/docker-mcsm}/releases/web/data:${INSTALL_PATH-/opt/docker-mcsm}/releases/web/data
+      - ${INSTALL_PATH-/opt/docker-mcsm}/releases/web/logs:${INSTALL_PATH-/opt/docker-mcsm}/releases/web/logs
+      - ${INSTALL_PATH-/opt/docker-mcsm}/releases/daemon/data/Config:${INSTALL_PATH-/opt/docker-mcsm}/releases/daemon/data/Config:ro
+    depends_on:
+      - mcsm-daemon
+
+  mcsm-daemon: # MCSM-D
+    container_name: mcsm-daemon
+    build:
+        context: .
+        dockerfile: dockerfile-daemon
+        args:
+            INSTALL_PATH: ${INSTALL_PATH-/opt/docker-mcsm}
+            TZ: ${TZ-Asia/Shanghai}
+    network_mode: "host"
+    restart: always
+    environment:
+      - PUID=0
+      - PGID=0
+      - UMASK=022
+    volumes:
+      - ${INSTALL_PATH-/opt/docker-mcsm}/releases/daemon/data:${INSTALL_PATH-/opt/docker-mcsm}/releases/daemon/data
+      - ${INSTALL_PATH-/opt/docker-mcsm}/releases/daemon/logs:${INSTALL_PATH-/opt/docker-mcsm}/releases/daemon/logs
+      - /var/run/docker.sock:/var/run/docker.sock:ro
